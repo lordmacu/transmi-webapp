@@ -96,6 +96,7 @@ export default function MapView({ stations, onLocate, locating, userPos, onStati
   useEffect(() => {
     if (!mapRef.current || !userPos) return;
     import("leaflet").then((L) => {
+      if (!mapRef.current) return;
       userMarkerRef.current?.remove();
       const icon = L.divIcon({
         className: "",
@@ -103,8 +104,14 @@ export default function MapView({ stations, onLocate, locating, userPos, onStati
         iconSize: [14, 14],
         iconAnchor: [7, 7],
       });
-      userMarkerRef.current = L.marker(userPos, { icon }).addTo(mapRef.current!);
-      mapRef.current!.setView(userPos, 15, { animate: true });
+      userMarkerRef.current = L.marker(userPos, { icon }).addTo(mapRef.current);
+      // Panel inferior cubre ~65vh → desplazar el centro hacia el sur para que el
+      // marcador aparezca en el área visible (top ~35vh) en lugar de quedar oculto
+      const zoom = 15;
+      const map = mapRef.current;
+      const offsetPx = (typeof window !== "undefined" ? window.innerHeight : 800) * 0.32;
+      const centerPt = map.project(userPos, zoom).add([0, offsetPx]);
+      map.setView(map.unproject(centerPt, zoom), zoom, { animate: true });
     });
   }, [userPos]);
 
