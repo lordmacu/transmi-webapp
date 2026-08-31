@@ -215,10 +215,20 @@ export default function MapView({ stations, onLocate, locating, userPos, onStati
     const isTroncal = (st.codigo || "").toUpperCase().startsWith("TM");
     try {
       const [rutasData, llegadasData] = await Promise.all([
-        getRutas(st.codigo, isTroncal).catch(() => getRutas(st.codigo, false)),
+        getRutas(st.codigo, isTroncal).catch(() => []),
         getLlegadas(st.codigo).catch(() => []),
       ]);
-      setRutas(rutasData);
+      // Fallback client-side: derivar rutas únicas de llegadas si el API no devuelve nada
+      const rutas = rutasData.length > 0 ? rutasData : (() => {
+        const seen = new Set<string>();
+        return llegadasData
+          .map((l) => {
+            const nombre = String(l.ruta_extraida || l.ruta_sae || "").trim();
+            return { id: String(l.ruta_sae || nombre), codigo: nombre, nombre };
+          })
+          .filter((r) => r.nombre && !seen.has(r.nombre) && seen.add(r.nombre));
+      })();
+      setRutas(rutas);
       setLlegadas(llegadasData);
     } finally {
       setLoadingLlegadas(false);
