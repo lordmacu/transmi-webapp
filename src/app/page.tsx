@@ -28,14 +28,19 @@ export default function Home() {
     }
   }, []);
 
+  const hasLocatedRef = useRef(false);
+
   const handleMapMoved = useCallback((bounds: MapBounds, userInitiated: boolean) => {
     lastBoundsRef.current = bounds;
     if (userInitiated) {
-      setShowSearchHere(true);
+      // Solo mostrar el botón si ya geolocalizó alguna vez
+      if (hasLocatedRef.current) setShowSearchHere(true);
     } else {
-      // Carga automática (inicio o geolocalización)
-      fetchBounds(bounds);
-      setShowSearchHere(false);
+      // Movimiento programático (geolocalización) → auto-fetch
+      if (hasLocatedRef.current) {
+        fetchBounds(bounds);
+        setShowSearchHere(false);
+      }
     }
   }, [fetchBounds]);
 
@@ -51,6 +56,7 @@ export default function Home() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lon } = pos.coords;
+        hasLocatedRef.current = true;
         setUserPos([lat, lon]);
         setLocating(false);
         setShowSearchHere(false);

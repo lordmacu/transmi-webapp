@@ -60,15 +60,7 @@ export default function MapView({ stations, onLocate, locating, userPos, onStati
       }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
       mapRef.current = map;
-      setTimeout(() => {
-        map.invalidateSize();
-        // Fire initial bounds (programmatic — auto-fetch)
-        const b = map.getBounds();
-        onMapMovedRef.current?.(
-          { latMin: b.getSouth(), latMax: b.getNorth(), lonMin: b.getWest(), lonMax: b.getEast() },
-          false
-        );
-      }, 150);
+      setTimeout(() => map.invalidateSize(), 150);
 
       map.on("dragstart", () => { programmaticRef.current = false; });
       map.on("moveend", () => {
