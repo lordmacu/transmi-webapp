@@ -29,9 +29,19 @@ export async function searchStations(q: string): Promise<Station[]> {
   return r.json();
 }
 
-export async function nearestStations(lat: number, lon: number): Promise<Station[]> {
-  const r = await fetch(`${BASE}/stations/nearest?lat=${lat}&lon=${lon}&limit=10`);
+export async function nearestStations(lat: number, lon: number, limit = 5): Promise<Station[]> {
+  const r = await fetch(`${BASE}/stations/nearest?lat=${lat}&lon=${lon}&limit=${limit}`);
   if (!r.ok) throw new Error("Error buscando paraderos cercanos");
+  return r.json();
+}
+
+export async function stationsInBounds(
+  latMin: number, latMax: number, lonMin: number, lonMax: number
+): Promise<Station[]> {
+  const r = await fetch(
+    `${BASE}/stations/bounds?lat_min=${latMin}&lat_max=${latMax}&lon_min=${lonMin}&lon_max=${lonMax}`
+  );
+  if (!r.ok) throw new Error("Error cargando paraderos en zona");
   return r.json();
 }
 

@@ -6,19 +6,27 @@ import type { Map as LeafletMap, Marker } from "leaflet";
 import type { Station, Llegada, Ruta } from "@/lib/api";
 import { getLlegadas, getRutas, parseCoord, tiempoLabel } from "@/lib/api";
 
+export interface MapBounds {
+  latMin: number; latMax: number; lonMin: number; lonMax: number;
+}
+
 interface Props {
   stations: Station[];
   onLocate: () => void;
   locating: boolean;
   userPos: [number, number] | null;
   onStationClickRef?: React.MutableRefObject<((s: Station) => void) | null>;
+  onMapMoved?: (bounds: MapBounds, userInitiated: boolean) => void;
 }
 
-export default function MapView({ stations, onLocate, locating, userPos, onStationClickRef }: Props) {
+export default function MapView({ stations, onLocate, locating, userPos, onStationClickRef, onMapMoved }: Props) {
   const mapRef = useRef<LeafletMap | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Marker[]>([]);
   const userMarkerRef = useRef<Marker | null>(null);
+  const programmaticRef = useRef(false);
+  const onMapMovedRef = useRef(onMapMoved);
+  useEffect(() => { onMapMovedRef.current = onMapMoved; });
 
   const [selected, setSelected] = useState<Station | null>(null);
   const [rutas, setRutas] = useState<Ruta[]>([]);
@@ -50,8 +58,28 @@ export default function MapView({ stations, onLocate, locating, userPos, onStati
       }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
       mapRef.current = map;
-      // Force recalculate size after mount
-      setTimeout(() => map.invalidateSize(), 100);
+      setTimeout(() => {
+        map.invalidateSize();
+        // Fire initial bounds (programmatic — auto-fetch)
+        const b = map.getBounds();
+        onMapMovedRef.current?.(
+          { latMin: b.getSouth(), latMax: b.getNorth(), lonMin: b.getWest(), lonMax: b.getEast() },
+          false
+        );
+      }, 150);
+
+      map.on("dragstart", () => { programmaticRef.current = false; });
+      map.on("moveend", () => {
+        if (!mapRef.current) return;
+        const b = mapRef.current.getBounds();
+        const bounds: MapBounds = {
+          latMin: b.getSouth(), latMax: b.getNorth(),
+          lonMin: b.getWest(), lonMax: b.getEast(),
+        };
+        const wasProgr = programmaticRef.current;
+        programmaticRef.current = false;
+        onMapMovedRef.current?.(bounds, !wasProgr);
+      });
     });
     return () => {
       mapRef.current?.remove();
@@ -105,8 +133,9 @@ export default function MapView({ stations, onLocate, locating, userPos, onStati
         iconAnchor: [7, 7],
       });
       userMarkerRef.current = L.marker(userPos, { icon }).addTo(mapRef.current);
-      // Panel inferior cubre ~65vh → desplazar el centro hacia el sur para que el
-      // marcador aparezca en el área visible (top ~35vh) en lugar de quedar oculto
+      // Marcar como programático para que moveend no muestre "Buscar en esta zona"
+      programmaticRef.current = true;
+      // Offset hacia el sur para que el marcador quede visible sobre el panel inferior
       const zoom = 15;
       const map = mapRef.current;
       const offsetPx = (typeof window !== "undefined" ? window.innerHeight : 800) * 0.32;
