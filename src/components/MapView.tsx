@@ -94,18 +94,23 @@ export default function MapView({ stations, onLocate, locating, userPos, onStati
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
 
-      const troncalIcon = L.divIcon({
+      const makePin = (color: string) => L.divIcon({
         className: "",
-        html: `<div style="width:10px;height:10px;background:#ef4444;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,
-        iconSize: [10, 10],
-        iconAnchor: [5, 5],
+        html: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="28" viewBox="0 0 20 28" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">
+          <path d="M10 0C4.48 0 0 4.48 0 10c0 7.75 10 18 10 18S20 17.75 20 10C20 4.48 15.52 0 10 0z"
+                fill="${color}" stroke="white" stroke-width="1.5"/>
+          <rect x="4.5" y="4.5" width="11" height="8" rx="1.5" fill="white"/>
+          <rect x="5" y="5" width="4.5" height="3" rx=".8" fill="${color}" opacity=".85"/>
+          <rect x="10.5" y="5" width="4.5" height="3" rx=".8" fill="${color}" opacity=".85"/>
+          <line x1="10" y1="4.5" x2="10" y2="12.5" stroke="${color}" stroke-width=".8" opacity=".4"/>
+          <circle cx="7" cy="13.5" r="1.2" fill="white"/>
+          <circle cx="13" cy="13.5" r="1.2" fill="white"/>
+        </svg>`,
+        iconSize: [20, 28],
+        iconAnchor: [10, 28],
       });
-      const zonalIcon = L.divIcon({
-        className: "",
-        html: `<div style="width:8px;height:8px;background:#f97316;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>`,
-        iconSize: [8, 8],
-        iconAnchor: [4, 4],
-      });
+      const troncalIcon = makePin("#ef4444");
+      const zonalIcon = makePin("#f97316");
 
       for (const st of stations) {
         const pos = parseCoord(st.coordenada);
