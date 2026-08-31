@@ -50,7 +50,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main style={{ position: "relative", width: "100%", height: "100%" }}>
+    <main style={{ position: "relative", width: "100%", height: "100dvh" }}>
       {/* Map fills the screen */}
       <MapView
         stations={stations}

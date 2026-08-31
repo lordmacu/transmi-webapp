@@ -1,5 +1,6 @@
 "use client";
 
+import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import type { Station, Llegada, Ruta } from "@/lib/api";
@@ -49,6 +50,8 @@ export default function MapView({ stations, onLocate, locating, userPos, onStati
       }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
       mapRef.current = map;
+      // Force recalculate size after mount
+      setTimeout(() => map.invalidateSize(), 100);
     });
     return () => {
       mapRef.current?.remove();
@@ -159,8 +162,8 @@ export default function MapView({ stations, onLocate, locating, userPos, onStati
   }, [selected]);
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+    <div style={{ position: "relative", width: "100%", height: "100dvh" }}>
+      <div ref={containerRef} style={{ width: "100%", height: "100dvh" }} />
 
       {/* Locate button */}
       <button

@@ -14,9 +14,7 @@
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
-
-#__next, main { height: 100%; }
+html, body { height: 100dvh; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
 
 input, button { font-family: inherit; }
 
