@@ -63,6 +63,27 @@ export async function getRutas(codigo: string, troncal = false): Promise<Ruta[]>
   return r.json();
 }
 
+export interface BusPosition {
+  vehicleid: number;
+  etiqueta: string;
+  latitud: number;
+  longitud: number;
+  angulo: number;
+  ocupacion_bus: string;
+  labeltiempo: string;
+  ruta_extraida: string;
+  distancia: number;
+}
+
+export async function getBusPositions(
+  estacion: string, rutaCodigo: string, idRuta = "", nombre = ""
+): Promise<BusPosition[]> {
+  const params = new URLSearchParams({ id_ruta: idRuta, nombre });
+  const r = await fetch(`${BASE}/brt/${estacion}/${encodeURIComponent(rutaCodigo)}?${params}`);
+  if (!r.ok) return [];
+  return r.json();
+}
+
 export async function searchRutas(q: string): Promise<Ruta[]> {
   const r = await fetch(`${BASE}/rutas?q=${encodeURIComponent(q)}`);
   if (!r.ok) throw new Error("Error buscando rutas");

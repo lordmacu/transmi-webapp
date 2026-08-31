@@ -3,8 +3,8 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Map as LeafletMap, Marker } from "leaflet";
-import type { Station, Llegada, Ruta } from "@/lib/api";
-import { getLlegadas, getRutas, parseCoord, tiempoLabel } from "@/lib/api";
+import type { Station, Llegada, Ruta, BusPosition } from "@/lib/api";
+import { getLlegadas, getRutas, getBusPositions, parseCoord, tiempoLabel } from "@/lib/api";
 
 export interface MapBounds {
   latMin: number; latMax: number; lonMin: number; lonMax: number;
@@ -34,6 +34,8 @@ export default function MapView({ stations, onLocate, locating, userPos, onStati
   const [llegadas, setLlegadas] = useState<Llegada[]>([]);
   const [loadingLlegadas, setLoadingLlegadas] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const busMarkersRef = useRef<import("leaflet").Marker[]>([]);
+  const busIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Init map
   useEffect(() => {
@@ -148,6 +150,62 @@ export default function MapView({ stations, onLocate, locating, userPos, onStati
       map.setView(map.unproject(centerPt, zoom), zoom, { animate: true });
     });
   }, [userPos]);
+
+  // Buses en vivo (solo troncal con ruta seleccionada)
+  const paintBuses = useCallback(async (ruta: Ruta, station: Station) => {
+    if (!mapRef.current) return;
+    const isTroncal = (station.codigo || "").toUpperCase().startsWith("TM");
+    if (!isTroncal) return;
+    import("leaflet").then(async (L) => {
+      const positions = await getBusPositions(station.codigo, ruta.nombre, ruta.id, ruta.nombre);
+      // Limpiar marcadores anteriores
+      busMarkersRef.current.forEach((m) => m.remove());
+      busMarkersRef.current = [];
+      for (const bus of positions) {
+        const ocupColor = bus.ocupacion_bus === "LLENO" ? "#ef4444"
+          : bus.ocupacion_bus === "MEDIO" ? "#f97316" : "#22c55e";
+        const icon = L.divIcon({
+          className: "",
+          html: `<div title="${bus.etiqueta} · ${bus.ocupacion_bus}\n${bus.labeltiempo}" style="
+            width:22px;height:22px;position:relative;
+            filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))">
+            <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'
+                 style='transform:rotate(${bus.angulo}deg);display:block'>
+              <circle cx='11' cy='11' r='10' fill='${ocupColor}' stroke='white' stroke-width='1.5'/>
+              <polygon points='11,3 15,17 11,14 7,17' fill='white' opacity='.9'/>
+            </svg>
+            <div style='position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);
+              background:rgba(0,0,0,.75);color:white;font-size:9px;white-space:nowrap;
+              padding:1px 4px;border-radius:3px'>${ruta.nombre}</div>
+          </div>`,
+          iconSize: [22, 36],
+          iconAnchor: [11, 11],
+        });
+        const m = L.marker([bus.latitud, bus.longitud], { icon, zIndexOffset: 500 })
+          .addTo(mapRef.current!);
+        busMarkersRef.current.push(m);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (busIntervalRef.current) clearInterval(busIntervalRef.current);
+    busMarkersRef.current.forEach((m) => m.remove());
+    busMarkersRef.current = [];
+    if (!selectedRuta || !selected) return;
+    paintBuses(selectedRuta, selected);
+    busIntervalRef.current = setInterval(() => paintBuses(selectedRuta, selected), 30_000);
+    return () => { if (busIntervalRef.current) clearInterval(busIntervalRef.current); };
+  }, [selectedRuta, selected, paintBuses]);
+
+  // Limpiar buses al cerrar panel
+  useEffect(() => {
+    if (!panelOpen) {
+      busMarkersRef.current.forEach((m) => m.remove());
+      busMarkersRef.current = [];
+      if (busIntervalRef.current) clearInterval(busIntervalRef.current);
+    }
+  }, [panelOpen]);
 
   // Expose click handler so page.tsx can trigger it programmatically (search/locate)
   useEffect(() => {
